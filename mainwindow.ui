@@ -10,6 +10,12 @@
     <height>1080</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>DejaVu Sans</family>
+    <bold>true</bold>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -25,7 +31,7 @@
     </property>
     <property name="font">
      <font>
-      <family>System-ui</family>
+      <family>DejaVu Sans</family>
       <pointsize>20</pointsize>
       <bold>true</bold>
      </font>
@@ -46,18 +52,19 @@
      <bool>false</bool>
     </property>
    </widget>
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="Categoria">
     <property name="geometry">
      <rect>
       <x>365</x>
       <y>85</y>
       <width>138</width>
-      <height>14</height>
+      <height>20</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <family>DejaVu Sans</family>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
@@ -67,111 +74,55 @@
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="ButtonPlayPause">
+   <widget class="QPushButton" name="ButtonLado">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>100</y>
-      <width>111</width>
-      <height>71</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>ButtonPlayPause</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="ButtonCor">
-    <property name="geometry">
-     <rect>
-      <x>599</x>
+      <x>833</x>
       <y>105</y>
       <width>200</width>
       <height>63</height>
      </rect>
     </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>255</red>
-          <green>255</green>
-          <blue>255</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Button">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>0</red>
-          <green>187</green>
-          <blue>255</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>255</red>
-          <green>255</green>
-          <blue>255</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Button">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>0</red>
-          <green>187</green>
-          <blue>255</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled>
-       <colorrole role="Button">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>0</red>
-          <green>187</green>
-          <blue>255</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </disabled>
-     </palette>
-    </property>
     <property name="font">
      <font>
-      <family>DejaVu Sans Condensed</family>
+      <family>DejaVu Sans</family>
       <pointsize>20</pointsize>
-      <italic>false</italic>
       <bold>true</bold>
      </font>
     </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
     <property name="text">
-     <string>Azul</string>
+     <string>ESQUERDO</string>
+    </property>
+    <property name="checkable">
+     <bool>false</bool>
+    </property>
+    <property name="autoRepeat">
+     <bool>false</bool>
+    </property>
+    <property name="autoExclusive">
+     <bool>false</bool>
     </property>
    </widget>
-   <widget class="QLabel" name="labelTime">
+   <widget class="QLabel" name="Lado">
     <property name="geometry">
      <rect>
-      <x>599</x>
+      <x>833</x>
       <y>85</y>
-      <width>74</width>
-      <height>14</height>
+      <width>138</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>10</pointsize>
+      <family>DejaVu Sans</family>
+      <bold>true</bold>
      </font>
     </property>
     <property name="text">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Time&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Lado&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -184,7 +135,7 @@
      <x>0</x>
      <y>0</y>
      <width>1920</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
