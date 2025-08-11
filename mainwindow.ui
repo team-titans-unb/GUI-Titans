@@ -146,8 +146,9 @@
     </property>
     <property name="font">
      <font>
-      <family>Sans Serif</family>
+      <family>DejaVu Sans Condensed</family>
       <pointsize>20</pointsize>
+      <italic>false</italic>
       <bold>true</bold>
      </font>
     </property>
