@@ -19,8 +19,7 @@ public:
 
 private slots:
     void on_ButtonCategoria_clicked();
-    void on_ButtonPlayPause_clicked();
-    void on_ButtonCor_clicked();
+    void on_ButtonLado_clicked();
 
 private:
     Ui::MainWindow *ui;
