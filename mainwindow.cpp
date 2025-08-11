@@ -82,3 +82,16 @@ void MainWindow::setButtonToPause()
         );
 }
 
+void MainWindow::on_ButtonCor_clicked()
+{
+    if (isButtonColorBlue) {        
+        ui->ButtonCor->setStyleSheet("background-color: yellow;");
+        ui->ButtonCor->setText("Amarelo");
+        isButtonColorBlue = false;
+    } 
+    else {
+        ui->ButtonCor->setStyleSheet("background-color: #00bbff;");
+        ui->ButtonCor->setText("Azul");
+        isButtonColorBlue = true;
+    }
+}
