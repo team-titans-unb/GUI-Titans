@@ -95,3 +95,12 @@ void MainWindow::on_ButtonCor_clicked()
         isButtonColorBlue = true;
     }
 }
+void MainWindow::on_ButtonLado_clicked()
+{
+    if (ui->ButtonLado->text() == "ESQUERDO") {
+        ui->ButtonLado->setText("DIREITO");
+    } else {
+        ui->ButtonLado->setText("ESQUERDO");
+    }
+}
+
