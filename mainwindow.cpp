@@ -1,5 +1,8 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "configmanager.h"
+#include "robotwidget.h"
+#include <QGridLayout>
 #include <QSettings>
 #include <QApplication>
 #include <QIcon>
@@ -9,54 +12,57 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    // Restaura o texto da categoria
-    QSettings settings("Titans", "Categoria");
-    QString ultimoTexto = settings.value("ultimoTextoCategoria", "VSSS").toString();
-    ui->ButtonCategoria->setText(ultimoTexto);
-
-    // Inicializa botão como PLAY
-    setButtonToPlay();
+    setupInitialState();
 }
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    
+}
+
+void MainWindow::setupInitialState()
+{
+    m_robotsLayout = new QGridLayout(ui->robotsContainerWidget); 
+    m_configManager.reset(new ConfigManager("mockdata.json"));
+
+    QSettings settings("Titans", "UIState");
+    QString lastCategory = settings.value("lastCategory", "VSSS").toString();
+    m_isButtonColorBlue = settings.value("isButtonColorBlue", true).toBool();
+
+    ui->ButtonCategoria->setText(lastCategory);
+    if (m_isButtonColorBlue) {
+        ui->ButtonCor->setStyleSheet("background-color: #00bbff;");
+        ui->ButtonCor->setText("Azul");
+    } else {
+        ui->ButtonCor->setStyleSheet("background-color: yellow;");
+        ui->ButtonCor->setText("Amarelo");
+    }
+
+    setButtonToPlay();
+    loadCategory(lastCategory);
 }
 
 void MainWindow::on_ButtonCategoria_clicked()
 {
-    QString novoTexto;
-    if (ui->ButtonCategoria->text() == "VSSS") {
-        novoTexto = "SSL";
-    } else {
-        novoTexto = "VSSS";
-    }
+    QString novoTexto = (ui->ButtonCategoria->text() == "VSSS") ? "SSL" : "VSSS";
     ui->ButtonCategoria->setText(novoTexto);
 
-    QSettings settings("Titans", "Categoria");
-    settings.setValue("ultimoTextoCategoria", novoTexto);
+    QSettings settings("Titans", "UIState");
+    settings.setValue("lastCategory", novoTexto);
+    
+    loadCategory(novoTexto);
 }
 
 void MainWindow::on_ButtonPlayPause_clicked()
 {
-    if (!playing) {
-
+    if (!m_playing) {
         setButtonToPause();
-        QApplication::processEvents();
-
         // startCommunication();
-
-        playing = true;
+        m_playing = true;
     } else {
-
         setButtonToPlay();
-        QApplication::processEvents();
-
-
         // stopCommunication();
-
-        playing = false;
+        m_playing = false;
     }
 }
 
@@ -84,14 +90,63 @@ void MainWindow::setButtonToPause()
 
 void MainWindow::on_ButtonCor_clicked()
 {
-    if (isButtonColorBlue) {        
+    QString newColorName;
+    
+    if (m_isButtonColorBlue) {        
         ui->ButtonCor->setStyleSheet("background-color: yellow;");
         ui->ButtonCor->setText("Amarelo");
-        isButtonColorBlue = false;
-    } 
-    else {
+        newColorName = "yellow";
+        m_isButtonColorBlue = false;
+    } else {
         ui->ButtonCor->setStyleSheet("background-color: #00bbff;");
         ui->ButtonCor->setText("Azul");
-        isButtonColorBlue = true;
+        newColorName = "blue";
+        m_isButtonColorBlue = true;
     }
+
+    QList<RobotData>& robots = m_configManager->getRobots();
+    for (RobotData& robot : robots) {
+        robot.teamColor = newColorName;
+    }
+    
+    QString currentCategory = ui->ButtonCategoria->text();
+    m_configManager->save(currentCategory);
+
+    QSettings settings("Titans", "UIState");
+    settings.setValue("isTeamColorBlue", m_isButtonColorBlue);
+    
+    for(int i = 0; i < robots.size(); ++i) {
+        m_robotWidgets[i]->updateData(robots[i]);
+    }
+}
+
+void MainWindow::loadCategory(const QString& category)
+{
+    clearRobotLayout(); 
+
+    if (m_configManager->load(category)) {
+        const QList<RobotData>& robots = m_configManager->getRobots();
+
+        int row = 0, col = 0;
+        for (const RobotData &robotData : robots) {
+            RobotWidget *widget = new RobotWidget();
+            widget->updateData(robotData);
+            
+            m_robotWidgets.append(widget);
+            m_robotsLayout->addWidget(widget, row, col++);
+            if (col >= 2) {
+                col = 0;
+                row++;
+            }
+        }
+    }
+}
+
+void MainWindow::clearRobotLayout()
+{
+    for (RobotWidget* widget : m_robotWidgets) {
+        m_robotsLayout->removeWidget(widget);
+        widget->deleteLater();
+    }
+    m_robotWidgets.clear();
 }

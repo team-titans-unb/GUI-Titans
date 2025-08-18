@@ -2,12 +2,17 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+
+class ConfigManager;
+class RobotWidget;
+class QGridLayout;
 
 class MainWindow : public QMainWindow
 {
@@ -23,9 +28,18 @@ private slots:
     void on_ButtonCor_clicked();
 
 private:
-    Ui::MainWindow *ui;
-    bool playing = false;
-    bool isButtonColorBlue = true;
+    void setupInitialState();
+    void loadCategory(const QString& category);
+    void clearRobotLayout();
+
+    QScopedPointer<Ui::MainWindow> ui;
+    QScopedPointer<ConfigManager> m_configManager;
+
+    bool m_playing = false;
+    bool m_isButtonColorBlue = true;
+
+    QGridLayout* m_robotsLayout = nullptr;
+    QList<RobotWidget*> m_robotWidgets;
 
     void setButtonToPlay();
     void setButtonToPause();

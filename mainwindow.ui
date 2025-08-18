@@ -177,6 +177,38 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QWidget" name="robotsContainerWidget" native="true">
+    <property name="geometry">
+     <rect>
+      <x>69</x>
+      <y>248</y>
+      <width>1019</width>
+      <height>440</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="labelRobots">
+    <property name="geometry">
+     <rect>
+      <x>89</x>
+      <y>258</y>
+      <width>138</width>
+      <height>14</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ROBÔS:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
