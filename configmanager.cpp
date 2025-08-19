@@ -95,6 +95,36 @@ QList<RobotData>& ConfigManager::getRobots()
     return m_robots; 
 }
 
+QList<RobotData> ConfigManager::getAllRobots(QString category, QString teamColor) const
+{
+    QList<RobotData> allPossibleRobots;
+
+    QMap<QString, int> categoryIdRanges;
+    categoryIdRanges["vsss"] = 9;
+    categoryIdRanges["ssl"] = 7;
+
+    QStringList colors = {"blue", "yellow"};
+
+    if (!categoryIdRanges.contains(category.toLower()) || !colors.contains(teamColor.toLower())) {
+        qWarning() << "Categoria ou cor de time inválida para obter todos os robôs.";
+        return allPossibleRobots;
+    }
+
+    for (int id = 0; id <= categoryIdRanges[category.toLower()]; ++id) {
+        RobotData robot;
+        robot.id = id;
+        robot.name = QString("%1_%2_%3").arg(category, teamColor, QString::number(id));
+        robot.role = RobotRole::Unknown;
+        robot.isConnected = false;
+        robot.category = category;
+        robot.teamColor = teamColor;
+
+        allPossibleRobots.append(robot);
+    }
+
+    return allPossibleRobots;
+}
+
 RobotRole ConfigManager::stringToRole(const QString &roleStr) {
     if (roleStr.compare("Attacker", Qt::CaseInsensitive) == 0) return RobotRole::Attacker;
     if (roleStr.compare("Goalkeeper", Qt::CaseInsensitive) == 0) return RobotRole::Goalkeeper;
@@ -110,3 +140,4 @@ QString ConfigManager::roleToString(RobotRole role) {
         default: return "Unknown";
     }
 }
+

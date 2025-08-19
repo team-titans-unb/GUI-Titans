@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QList>
+#include "robotdata.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -26,6 +27,7 @@ private slots:
     void on_ButtonCategoria_clicked();
     void on_ButtonPlayPause_clicked();
     void on_ButtonCor_clicked();
+    void onRobotWidgetClicked(const RobotData& currentRobotData);
 
 private:
     void setupInitialState();

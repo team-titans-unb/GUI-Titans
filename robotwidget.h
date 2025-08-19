@@ -14,8 +14,14 @@ class RobotWidget : public QWidget
 
 public:
     explicit RobotWidget(QWidget *parent = nullptr);
-
     void updateData(const RobotData &data);
+    RobotData getCurrentData() const;
+
+signals:
+    void idChanged(const RobotData &data);
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     void setupUi();
@@ -24,6 +30,7 @@ private:
     QComboBox *m_roleComboBox;
     StatusIndicator *m_statusIndicator;
     QLabel *m_robotImageLabel;
+    RobotData m_currentData;
 };
 
 #endif

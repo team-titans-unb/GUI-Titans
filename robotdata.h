@@ -1,4 +1,5 @@
 #ifndef ROBOTDATA_H
+#include <QMetaType>
 #define ROBOTDATA_H
 
 #include <QString>
@@ -19,5 +20,7 @@ struct RobotData {
     QString category;
     QString teamColor;
 };
+
+Q_DECLARE_METATYPE(RobotData)
 
 #endif

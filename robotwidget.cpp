@@ -3,6 +3,7 @@
 #include <QHBoxLayout>
 #include <QPixmap>
 #include <QPainter>
+#include <QMouseEvent>
 
 class StatusIndicator : public QWidget {
 public:
@@ -53,7 +54,7 @@ void RobotWidget::setupUi()
     nameAndRoleLayout->addWidget(m_roleComboBox);
     
     topLayout->addLayout(nameAndRoleLayout);
-    topLayout->addStretch();
+    //topLayout->addStretch();
     topLayout->addWidget(m_statusIndicator);
     
     this->setStyleSheet("RobotWidget { background-color: #f0f0f0; border: 1px solid #dcdcdc; border-radius: 8px; }");
@@ -83,4 +84,18 @@ void RobotWidget::updateData(const RobotData &data)
     } else {
         m_robotImageLabel->setPixmap(robotPixmap);
     }
+
+    m_currentData = data;
+    m_nameLabel->setText(QString("%1 (%2)").arg(data.name).arg(data.id));
+}
+
+void RobotWidget::mousePressEvent(QMouseEvent *event)
+{
+    emit idChanged(m_currentData);
+    QWidget::mousePressEvent(event);
+}
+
+RobotData RobotWidget::getCurrentData() const
+{
+    return m_currentData;
 }

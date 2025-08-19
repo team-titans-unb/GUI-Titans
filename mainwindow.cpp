@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "robotselectiondialog.h"
 #include "configmanager.h"
 #include "robotwidget.h"
 #include <QGridLayout>
@@ -131,6 +132,8 @@ void MainWindow::loadCategory(const QString& category)
         for (const RobotData &robotData : robots) {
             RobotWidget *widget = new RobotWidget();
             widget->updateData(robotData);
+
+            connect(widget, &RobotWidget::idChanged, this, &MainWindow::onRobotWidgetClicked);
             
             m_robotWidgets.append(widget);
             m_robotsLayout->addWidget(widget, row, col++);
@@ -149,4 +152,44 @@ void MainWindow::clearRobotLayout()
         widget->deleteLater();
     }
     m_robotWidgets.clear();
+}
+
+void MainWindow::onRobotWidgetClicked(const RobotData& currentRobotData)
+{
+    QSet<int> displayedRobotIDs;
+    for (const RobotWidget* widget : m_robotWidgets) {
+        displayedRobotIDs.insert(widget->getCurrentData().id);
+    }
+
+    const QList<RobotData>& allRobots = m_configManager->getAllRobots(currentRobotData.category, currentRobotData.teamColor);
+    QList<RobotData> availableRobots;
+    for (const RobotData& robot : allRobots) {
+        if (!displayedRobotIDs.contains(robot.id)) {
+            availableRobots.append(robot);
+        }
+    }
+
+    if (availableRobots.isEmpty()) {
+        qDebug() << "Nenhum robô disponível para troca.";
+        return;
+    }
+
+    RobotSelectionDialog dialog(availableRobots, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        RobotData newRobot = dialog.getSelectedRobot();
+
+        QList<RobotData>& robotsToModify = m_configManager->getRobots();
+        int oldIndex = -1, newIndex = -1;
+        for(int i = 0; i < robotsToModify.size(); ++i) {
+            if (robotsToModify[i].id == currentRobotData.id) oldIndex = i;
+            if (robotsToModify[i].id == newRobot.id) newIndex = i;
+        }
+
+        if (oldIndex != -1 && newIndex != -1) {
+            robotsToModify.swapItemsAt(oldIndex, newIndex);
+        }
+
+        m_configManager->save(currentRobotData.category);
+        loadCategory(currentRobotData.category);
+    }
 }
