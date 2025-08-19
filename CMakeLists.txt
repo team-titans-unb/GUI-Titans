@@ -27,6 +27,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         resources.qrc
+        robotwidget.h robotwidget.cpp robotselectiondialog.h robotselectiondialog.cpp robotdata.h configmanager.h configmanager.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET GUI-Titans APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
