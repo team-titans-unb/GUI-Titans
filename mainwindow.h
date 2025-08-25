@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QTime>
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -24,6 +26,9 @@ private slots:
 
     void on_ButtonLado_clicked();
 
+    void startTimer();
+    void updateTimer();
+
 private:
     Ui::MainWindow *ui;
     bool playing = false;
@@ -31,6 +36,9 @@ private:
 
     void setButtonToPlay();
     void setButtonToPause();
+
+    QTimer *timer;
+    QTime screenTime;
 };
 
 #endif // MAINWINDOW_H

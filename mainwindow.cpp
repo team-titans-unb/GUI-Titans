@@ -17,6 +17,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Inicializa botão como PLAY
     setButtonToPlay();
+
+    //cronometro
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &MainWindow::updateTimer);
+
 }
 
 MainWindow::~MainWindow()
@@ -43,6 +48,7 @@ void MainWindow::on_ButtonPlayPause_clicked()
     if (!playing) {
 
         setButtonToPause();
+        startTimer();
         QApplication::processEvents();
 
         // startCommunication();
@@ -51,6 +57,7 @@ void MainWindow::on_ButtonPlayPause_clicked()
     } else {
 
         setButtonToPlay();
+        timer->stop();
         QApplication::processEvents();
 
 
@@ -58,6 +65,7 @@ void MainWindow::on_ButtonPlayPause_clicked()
 
         playing = false;
     }
+
 }
 
 void MainWindow::setButtonToPlay()
@@ -80,6 +88,24 @@ void MainWindow::setButtonToPause()
         "QPushButton { background:#F44336; border-radius:6px; padding:10px; }"
         "QPushButton:pressed { background:#D32F2F; }"
         );
+}
+
+void MainWindow::startTimer()
+{
+    screenTime.setHMS(0,0,0);
+    QString stringScreenTime = screenTime.toString("mm:ss");
+    ui->LabelCronometro->setText(stringScreenTime);
+
+    timer->start(1000);
+}
+
+void MainWindow::updateTimer(){
+
+    screenTime = screenTime.addSecs(1);
+
+    QString stringScreenTime = screenTime.toString("mm:ss");
+    ui->LabelCronometro->setText(stringScreenTime);
+
 }
 
 void MainWindow::on_ButtonCor_clicked()
