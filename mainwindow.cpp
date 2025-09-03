@@ -1,5 +1,9 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "robotselectiondialog.h"
+#include "configmanager.h"
+#include "robotwidget.h"
+#include <QGridLayout>
 #include <QSettings>
 #include <QApplication>
 #include <QIcon>
@@ -9,14 +13,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    // Restaura o texto da categoria
-    QSettings settings("Titans", "Categoria");
-    QString ultimoTexto = settings.value("ultimoTextoCategoria", "VSSS").toString();
-    ui->ButtonCategoria->setText(ultimoTexto);
-
-    // Inicializa botão como PLAY
-    setButtonToPlay();
+    setupInitialState();
 
     //cronometro
     timer = new QTimer(this);
@@ -26,44 +23,72 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    
+}
+
+void MainWindow::setupInitialState()
+{
+    m_robotsLayout = new QGridLayout();
+    QVBoxLayout* containerRobotsLayout = new QVBoxLayout(ui->robotsContainerWidget);
+    QLabel* robotsTitleLabel = new QLabel("ROBÔS:");
+    robotsTitleLabel->setStyleSheet(
+        "font-weight: bold;"
+        "font-size: 14px;"
+        "margin-bottom: 10px;"
+    );
+    robotsTitleLabel->setAlignment(Qt::AlignLeft);
+
+    containerRobotsLayout->addWidget(robotsTitleLabel);
+    containerRobotsLayout->addLayout(m_robotsLayout);
+    containerRobotsLayout->addStretch();
+
+    m_configManager.reset(new ConfigManager("mockdata.json"));
+
+    QSettings settings("Titans", "UIState");
+    QString lastCategory = settings.value("lastCategory", "VSSS").toString();
+    m_isButtonColorBlue = settings.value("isButtonColorBlue", true).toBool();
+
+    ui->ButtonCategoria->setText(lastCategory);
+    if (m_isButtonColorBlue) {
+        ui->ButtonCor->setStyleSheet("background-color: #00bbff;");
+        ui->ButtonCor->setText("Azul");
+    } else {
+        ui->ButtonCor->setStyleSheet("background-color: yellow;");
+        ui->ButtonCor->setText("Amarelo");
+    }
+
+    setButtonToPlay();
+    loadCategory(lastCategory);
 }
 
 void MainWindow::on_ButtonCategoria_clicked()
 {
-    QString novoTexto;
-    if (ui->ButtonCategoria->text() == "VSSS") {
-        novoTexto = "SSL";
-    } else {
-        novoTexto = "VSSS";
-    }
+    QString novoTexto = (ui->ButtonCategoria->text() == "VSSS") ? "SSL" : "VSSS";
     ui->ButtonCategoria->setText(novoTexto);
 
-    QSettings settings("Titans", "Categoria");
-    settings.setValue("ultimoTextoCategoria", novoTexto);
+    QSettings settings("Titans", "UIState");
+    settings.setValue("lastCategory", novoTexto);
+    
+    loadCategory(novoTexto);
 }
 
 void MainWindow::on_ButtonPlayPause_clicked()
 {
-    if (!playing) {
-
+    if (!m_playing) {
         setButtonToPause();
         startTimer();
         QApplication::processEvents();
 
         // startCommunication();
-
-        playing = true;
+        m_playing = true;
     } else {
-
         setButtonToPlay();
         timer->stop();
         QApplication::processEvents();
 
 
         // stopCommunication();
-
-        playing = false;
+        m_playing = false;
     }
 
 }
@@ -110,16 +135,78 @@ void MainWindow::updateTimer(){
 
 void MainWindow::on_ButtonCor_clicked()
 {
-    if (isButtonColorBlue) {        
+    QString newColorName;
+    
+    if (m_isButtonColorBlue) {        
         ui->ButtonCor->setStyleSheet("background-color: yellow;");
         ui->ButtonCor->setText("Amarelo");
-        isButtonColorBlue = false;
-    } 
-    else {
+        newColorName = "yellow";
+        m_isButtonColorBlue = false;
+    } else {
         ui->ButtonCor->setStyleSheet("background-color: #00bbff;");
         ui->ButtonCor->setText("Azul");
-        isButtonColorBlue = true;
+        newColorName = "blue";
+        m_isButtonColorBlue = true;
     }
+
+    QList<RobotData>& robots = m_configManager->getRobots();
+    for (RobotData& robot : robots) {
+        robot.teamColor = newColorName;
+    }
+    
+    QString currentCategory = ui->ButtonCategoria->text();
+    m_configManager->save(currentCategory);
+
+    QSettings settings("Titans", "UIState");
+    settings.setValue("isTeamColorBlue", m_isButtonColorBlue);
+    
+    for(int i = 0; i < robots.size(); ++i) {
+        RobotWidget* widget = m_robotWidgets[i];
+        const RobotData& updateRobotData = robots[i];
+
+        RobotData dataForDisplay = updateRobotData;
+        dataForDisplay.name = widget->getCurrentData().name;
+
+        widget->updateData(dataForDisplay);
+    }
+}
+
+void MainWindow::loadCategory(const QString& category)
+{
+    clearRobotLayout(); 
+
+    if (m_configManager->load(category)) {
+        QList<RobotData>& robots = m_configManager->getRobots();
+        const QString startupColor = "blue";
+        for (RobotData &robotData : robots) {
+            robotData.teamColor = startupColor;
+        }
+
+        int row = 0, col = 0;
+        for (const RobotData &robotData : robots) {
+            RobotWidget *widget = new RobotWidget();
+            widget->updateData(robotData);
+
+            connect(widget, &RobotWidget::idChanged, this, &MainWindow::onRobotWidgetClicked);
+            connect(widget, &RobotWidget::roleChanged, this, &MainWindow::onRobotRoleChanged);
+
+            m_robotWidgets.append(widget);
+            m_robotsLayout->addWidget(widget, row, col++);
+            if (col >= 2) {
+                col = 0;
+                row++;
+            }
+        }
+    }
+}
+
+void MainWindow::clearRobotLayout()
+{
+    for (RobotWidget* widget : m_robotWidgets) {
+        m_robotsLayout->removeWidget(widget);
+        widget->deleteLater();
+    }
+    m_robotWidgets.clear();
 }
 void MainWindow::on_ButtonLado_clicked()
 {
@@ -130,3 +217,78 @@ void MainWindow::on_ButtonLado_clicked()
     }
 }
 
+
+
+void MainWindow::onRobotWidgetClicked(const RobotData& currentRobotData)
+{
+    QSet<int> displayedRobotIDs;
+    for (const RobotWidget* widget : m_robotWidgets) {
+        displayedRobotIDs.insert(widget->getCurrentData().id);
+    }
+
+    const QList<RobotData>& allRobots = m_configManager->getAllRobots(currentRobotData.category, currentRobotData.teamColor);
+    QList<RobotData> availableRobots;
+    for (const RobotData& robot : allRobots) {
+        if (!displayedRobotIDs.contains(robot.id)) {
+            availableRobots.append(robot);
+        }
+    }
+
+    if (availableRobots.isEmpty()) {
+        qDebug() << "Nenhum robô disponível para troca.";
+        return;
+    }
+
+    RobotSelectionDialog dialog(availableRobots, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        RobotData newRobotData = dialog.getSelectedRobot();
+
+        RobotWidget* widgetToUpdate = nullptr;
+        for (RobotWidget* widget : m_robotWidgets) {
+            if (widget->getCurrentData().id == currentRobotData.id) {
+                widgetToUpdate = widget;
+                break;
+            }
+        }
+        if (!widgetToUpdate) {
+            qWarning() << "Widget do robô atual não encontrado!";
+            return;
+        }
+
+        RobotData dataForDisplay = newRobotData;
+        dataForDisplay.name = widgetToUpdate->getCurrentData().name;
+
+        QList<RobotData>& robotsInConfig = m_configManager->getRobots();
+        int indexOfRobotToChange = -1;
+        for(int i = 0; i < robotsInConfig.size(); ++i) {
+            if (robotsInConfig[i].id == currentRobotData.id) {
+                indexOfRobotToChange = i;
+                break;
+            }
+        }
+
+        if (indexOfRobotToChange != -1) {
+            RobotData& slotToModify = robotsInConfig[indexOfRobotToChange];
+            slotToModify.id = newRobotData.id;
+        }
+
+        widgetToUpdate->updateData(dataForDisplay);
+        
+        m_configManager->save(currentRobotData.category);
+    }
+}
+
+void MainWindow::onRobotRoleChanged(const RobotData& updatedData)
+{
+    QList<RobotData>& robots = m_configManager->getRobots();
+
+    for (RobotData& robot : robots) {
+        if (robot.id == updatedData.id) {
+            robot.role = updatedData.role;
+            break;
+        }
+    }
+
+    QString currentCategory = ui->ButtonCategoria->text();
+    m_configManager->save(currentCategory);
+}
