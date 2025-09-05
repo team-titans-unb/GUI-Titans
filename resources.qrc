@@ -3,4 +3,7 @@
         <file>pause.svg</file>
         <file>play.svg</file>
     </qresource>
+    <qresource prefix="/logo">
+        <file>LOGO.png</file>
+    </qresource>
 </RCC>
