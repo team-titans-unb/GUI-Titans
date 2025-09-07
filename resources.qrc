@@ -40,5 +40,8 @@
         <file>tags/vsss_yellow_7.png</file>
         <file>tags/vsss_yellow_8.png</file>
         <file>tags/vsss_yellow_9.png</file>
+=======
+    <qresource prefix="/logo">
+        <file>LOGO.png</file>
     </qresource>
 </RCC>
