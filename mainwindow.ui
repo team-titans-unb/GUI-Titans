@@ -95,6 +95,9 @@
                <height>16777215</height>
               </size>
              </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
+             </property>
              <property name="text">
               <string>ButtonPlayPause</string>
              </property>
@@ -152,6 +155,9 @@
                <pointsize>20</pointsize>
                <bold>true</bold>
               </font>
+             </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
              </property>
              <property name="text">
               <string>VSSS</string>
@@ -231,6 +237,9 @@
                <bold>true</bold>
               </font>
              </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
+             </property>
              <property name="text">
               <string>Azul</string>
              </property>
@@ -284,6 +293,9 @@
                <kerning>true</kerning>
               </font>
              </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
+             </property>
              <property name="text">
               <string>ESQUERDO</string>
              </property>
@@ -313,6 +325,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="ButtonLimpar">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="text">
             <string>Limpar</string>
            </property>
@@ -345,9 +360,12 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="logs">
+          <property name="cursor">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
           <attribute name="title">
            <string>Logs</string>
           </attribute>
@@ -358,6 +376,9 @@
           </layout>
          </widget>
          <widget class="QWidget" name="visao">
+          <property name="cursor">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
           <attribute name="title">
            <string>Visão</string>
           </attribute>
@@ -368,6 +389,9 @@
           </layout>
          </widget>
          <widget class="QWidget" name="controle">
+          <property name="cursor">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
           <attribute name="title">
            <string>Controle</string>
           </attribute>
