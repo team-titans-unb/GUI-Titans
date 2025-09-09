@@ -1,52 +1,68 @@
 import argparse
-import os
 from pathlib import Path
-from typing import Any, Dict, Callable
+from typing import Any, Dict
 
 PROJECT_CONFIGS: Dict[str, Dict[str, Any]] = {
     "VSSS": {
         "path": "VSSS/Corobeu/configs",
-        "var_name": "COR_DO_TIME",
-        "formatter": lambda color: f"{1 if color == 'blue' else 0:<28} # 0 -> Amarelo; 1 -> Azul"
+        "variables": {
+            "color": {
+                "var_name": "COR_DO_TIME",
+                "formatter": lambda value: f"{1 if value == 'blue' else 0:<29} # 0 -> Amarelo; 1 -> Azul"
+            },
+            "side": {
+                "var_name": "LADO_DO_TIME",
+                "formatter": lambda value: f"{1 if value == 'right' else 0:<28} # 0 -> Esquerdo; 1 -> Direito"
+            }
+        }
     },
     "SSL": {
         "path": "SSL-EL_CBR-2024/Controle",
-        "var_name": "TEAM_COLOR",
-        "formatter": lambda color: f"'{color}'"
+        "variables": {
+            "color": {
+                "var_name": "TEAM_COLOR",
+                "formatter": lambda value: f"'{value}'"
+            },
+            "side": {
+                "var_name": "SIDE_TEAM",
+                "formatter": lambda value: f"'{value}'"
+            }
+        }
     }
 }
 
-def update_config_file(file_path: Path, var_name: str, new_value_formatted: str) -> bool:
+def update_config_file(file_path: Path, updates: Dict[str, str]) -> bool:
     """
-    Lê um arquivo de configuração, substitui o valor de uma variável e salva o arquivo.
+    Lê um arquivo de configuração, aplica múltiplas atualizações de variáveis e salva o arquivo uma única vez.
 
     Args:
         file_path: O caminho completo para o arquivo 'config.py'.
-        var_name: O nome da variável a ser alterada (ex: 'TEAM_COLOR').
-        new_value_formatted: A string completa com o novo valor já formatado.
-
-    Returns:
-        True se a atualização foi bem-sucedida, False caso contrário.
+        updates: Um dicionário contendo os nomes das variáveis a serem alteradas e seus novos valores.
     """
     if not file_path.is_file():
         print(f"ERRO: Arquivo de configuração não encontrado em '{file_path}'")
         return False
 
-    print(f"Tentando atualizar o arquivo: '{file_path}'...")
+    print(f"Atualizando {len(updates)} variável(is) em '{file_path.name}'...")
     try:
         lines = file_path.read_text().splitlines()
-        
         updated_lines = []
-        var_found = False
+        vars_to_update = set(updates.keys())
+
         for line in lines:
-            if line.strip().startswith(var_name):
-                updated_lines.append(f"{var_name} = {new_value_formatted}")
-                var_found = True
-            else:
+            match_found = False
+            for var_name, new_value in updates.items():
+                if line.strip().startswith(var_name):
+                    updated_lines.append(f"{var_name} = {new_value}")
+                    vars_to_update.remove(var_name)
+                    match_found = True
+                    break
+
+            if not match_found:
                 updated_lines.append(line)
-        
-        if not var_found:
-            updated_lines.append(f"\n{var_name} = {new_value_formatted}")
+
+        for var_name in vars_to_update:
+            updated_lines.append(f"\n{var_name} = {updates[var_name]}")
 
         file_path.write_text("\n".join(updated_lines) + "\n")
         print(f"SUCESSO: Arquivo '{file_path.name}' atualizado.")
@@ -68,25 +84,46 @@ def main():
     # parser.add_argument(
     #     '--color', 
     #     type=str, 
-    #     required=True, 
     #     choices=['blue', 'yellow'],
     #     help="A nova cor do time."
     # )
+    # parser.add_argument(
+    #     '--side',
+    #     type=str,
+    #     choices=['left', 'right'],
+    #     help="O novo lado do campo (left/right)."
+    # )
     # args = parser.parse_args()
 
-    args = argparse.Namespace(category='SSL', color='yellow')  # Simulação de argumentos para teste
+    args = argparse.Namespace(category='SSL', color='blue', side=None)  # Simulação de argumentos para teste
+
+    if args.category not in PROJECT_CONFIGS:
+        print(f"ERRO: Categoria inválida '{args.category}'. Opções válidas são: {list(PROJECT_CONFIGS.keys())}")
+        return
+    if not args.color and not args.side:
+        print("ERRO: Especifique ao menos uma variável para atualizar (--color ou --side).")
+        return
 
     script_dir = Path(__file__).parent
     project_root = (script_dir / '../../').resolve()
     
-    config = PROJECT_CONFIGS[args.category]
-    project_path = project_root / config["path"]
-    config_file = project_path / 'config.py'
-    
-    formatted_value = config["formatter"](args.color)
+    project_config = PROJECT_CONFIGS[args.category]
+    config_file = project_root / project_config["path"] / 'config.py'
 
-    update_config_file(config_file, config["var_name"], formatted_value)
+    updates_to_apply = {}
 
+    if args.color:
+        color_config = project_config["variables"]["color"]
+        updates_to_apply[color_config["var_name"]] = color_config["formatter"](args.color)
+
+    if args.side:
+        side_config = project_config["variables"]["side"]
+        updates_to_apply[side_config["var_name"]] = side_config["formatter"](args.side)
+
+    success = update_config_file(config_file, updates_to_apply)
+    if not success:
+        print("Falha ao atualizar a configuração.")
+        return
     print("\n--- Atualização de configuração finalizada ---")
 
 if __name__ == "__main__":
