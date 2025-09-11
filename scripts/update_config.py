@@ -2,36 +2,53 @@ import argparse
 from pathlib import Path
 from typing import Any, Dict
 
-PROJECT_CONFIGS: Dict[str, Dict[str, Any]] = {
-    "VSSS": {
-        "path": "VSSS/Corobeu/configs",
-        "variables": {
-            "color": {
-                "var_name": "COR_DO_TIME",
-                "formatter": lambda value: f"{1 if value == 'blue' else 0:<29} # 0 -> Amarelo; 1 -> Azul"
-            },
-            "side": {
-                "var_name": "LADO_DO_TIME",
-                "formatter": lambda value: f"{1 if value == 'right' else 0:<28} # 0 -> Esquerdo; 1 -> Direito"
-            }
+ROLE_MAP = {
+    'goalkeeper': 0,
+    'defender': 1,
+    'attacker': 2
+}
+
+COLOR_MAP = {
+    'yellow': 0,
+    'blue': 1
+}
+
+SIDE_MAP = {
+    'left': 0,
+    'right': 1
+}
+
+COMMON_PROJECT_LOGIC = {
+    "config_filename": "config.py",
+    "variables": {
+        "color": {
+            "var_name": "COR_DO_TIME",
+            "formatter": lambda color: str(COLOR_MAP.get(color))
+        },
+        "side": {
+            "var_name": "LADO_DO_TIME",
+            "formatter": lambda side: str(SIDE_MAP.get(side))
         }
     },
-    "SSL": {
-        "path": "SSL-EL_CBR-2024/Controle",
-        "variables": {
-            "color": {
-                "var_name": "TEAM_COLOR",
-                "formatter": lambda value: f"'{value}'"
-            },
-            "side": {
-                "var_name": "SIDE_TEAM",
-                "formatter": lambda value: f"'{value}'"
-            }
-        }
+    "robot_logic": {
+        "id_var_template": "ID_{name}",
+        "role_var_template": "FUNCAO_{name}",
+        "role_map": ROLE_MAP
     }
 }
 
-def update_config_file(file_path: Path, updates: Dict[str, str]) -> bool:
+PROJECT_CONFIGS: Dict[str, Dict[str, Any]] = {
+    "VSSS": {
+        "path": "VSSS/Corobeu/configs",
+        **COMMON_PROJECT_LOGIC
+    },
+    "SSL": {
+        "path": "SSL-EL_CBR-2024/Controle",
+        **COMMON_PROJECT_LOGIC
+    }
+}
+
+def update_variables(file_path: Path, updates: Dict[str, str]) -> bool:
     """
     Lê um arquivo de configuração, aplica múltiplas atualizações de variáveis e salva o arquivo uma única vez.
 
@@ -53,8 +70,15 @@ def update_config_file(file_path: Path, updates: Dict[str, str]) -> bool:
             match_found = False
             for var_name, new_value in updates.items():
                 if line.strip().startswith(var_name):
-                    updated_lines.append(f"{var_name} = {new_value}")
-                    vars_to_update.remove(var_name)
+                    value_part = f"{var_name} = {new_value}"
+                    comment_part = ''
+                    if '#' in line:
+                        comment_part = line.split('#', 1)[1]
+                        updated_lines.append(f"{value_part:<28} #{comment_part}")
+                    else:
+                        updated_lines.append(value_part)
+
+                    if var_name in vars_to_update: vars_to_update.remove(var_name)
                     match_found = True
                     break
 
@@ -73,57 +97,67 @@ def update_config_file(file_path: Path, updates: Dict[str, str]) -> bool:
         return False
 
 def main():
-    # parser = argparse.ArgumentParser(description="Atualiza a cor do time nos projetos VSSS e SSL.")
-    # parser.add_argument(
-    #     '--category', 
-    #     type=str, 
-    #     required=True, 
-    #     choices=PROJECT_CONFIGS.keys(),
-    #     help="A categoria do projeto."
-    # )
-    # parser.add_argument(
-    #     '--color', 
-    #     type=str, 
-    #     choices=['blue', 'yellow'],
-    #     help="A nova cor do time."
-    # )
-    # parser.add_argument(
-    #     '--side',
-    #     type=str,
-    #     choices=['left', 'right'],
-    #     help="O novo lado do campo (left/right)."
-    # )
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Atualiza a configuração do time nos projetos VSSS e SSL.")
+    # Argumentos...
+    parser.add_argument('--category', type=str, required=True, choices=PROJECT_CONFIGS.keys(), help="VSSS ou SSL.")
+    parser.add_argument('--color', type=str, choices=['blue', 'yellow'], help="blue ou yellow.")
+    parser.add_argument('--side', type=str, choices=['left', 'right'], help="left ou right.")
+    parser.add_argument('--robot_name', type=str, help="Nome do robô (ex: ZEUS, ALVIN).")
+    parser.add_argument('--set_role', type=str, choices=['goalkeeper', 'defender', 'attacker'], help="goalkeeper, defender ou attacker.")
+    parser.add_argument('--set_id', type=int, help="O novo ID do robô.")
+    
+    args = parser.parse_args()
 
-    args = argparse.Namespace(category='SSL', color='blue', side=None)  # Simulação de argumentos para teste
+    # Lógica principal
 
-    if args.category not in PROJECT_CONFIGS:
-        print(f"ERRO: Categoria inválida '{args.category}'. Opções válidas são: {list(PROJECT_CONFIGS.keys())}")
+    # 1. Validação de Robôs (melhoria de robustez)
+    vsss_robots = ['ZEUS', 'KRATOS', 'ARES']
+    ssl_robots = ['ALVIN', 'SIMON', 'THEODORE']
+    if args.robot_name and args.category == 'VSSS' and args.robot_name.upper() not in vsss_robots:
+        print(f"ERRO: Robô '{args.robot_name}' inválido para a categoria VSSS. Use: {vsss_robots}")
         return
-    if not args.color and not args.side:
-        print("ERRO: Especifique ao menos uma variável para atualizar (--color ou --side).")
+    if args.robot_name and args.category == 'SSL' and args.robot_name.upper() not in ssl_robots:
+        print(f"ERRO: Robô '{args.robot_name}' inválido para a categoria SSL. Use: {ssl_robots}")
         return
 
+    # 2. Configuração de caminhos
+    project_config = PROJECT_CONFIGS[args.category]
     script_dir = Path(__file__).parent
     project_root = (script_dir / '../../').resolve()
-    
-    project_config = PROJECT_CONFIGS[args.category]
-    config_file = project_root / project_config["path"] / 'config.py'
+    config_file = project_root / project_config["path"] / project_config["config_filename"]
 
-    updates_to_apply = {}
+    # 3. Criação de UM dicionário para TODAS as atualizações
+    updates_to_make = {}
 
+    # Adiciona atualizações globais ao dicionário
     if args.color:
-        color_config = project_config["variables"]["color"]
-        updates_to_apply[color_config["var_name"]] = color_config["formatter"](args.color)
-
+        conf = project_config["variables"]["color"]
+        updates_to_make[conf["var_name"]] = conf["formatter"](args.color)
     if args.side:
-        side_config = project_config["variables"]["side"]
-        updates_to_apply[side_config["var_name"]] = side_config["formatter"](args.side)
+        conf = project_config["variables"]["side"]
+        updates_to_make[conf["var_name"]] = conf["formatter"](args.side)
 
-    success = update_config_file(config_file, updates_to_apply)
-    if not success:
-        print("Falha ao atualizar a configuração.")
-        return
+    # Adiciona atualizações específicas do robô ao dicionário
+    if args.robot_name and (args.set_role or args.set_id is not None):
+        robot_logic = project_config['robot_logic']
+        name = args.robot_name.upper()
+
+        if args.set_id is not None:
+            var_name = robot_logic['id_var_template'].format(name=name)
+            updates_to_make[var_name] = str(args.set_id)
+        if args.set_role:
+            var_name = robot_logic['role_var_template'].format(name=name)
+            role_value = robot_logic['role_map'].get(args.set_role)
+            updates_to_make[var_name] = str(role_value)
+
+    # 4. Aplicação das atualizações
+
+    print("\n--- Iniciando atualização de configuração ---\n")
+    if updates_to_make:
+        update_variables(config_file, updates_to_make)
+    else:
+        print("Nenhuma atualização especificada. Nada foi alterado.")
+
     print("\n--- Atualização de configuração finalizada ---")
 
 if __name__ == "__main__":
