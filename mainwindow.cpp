@@ -8,6 +8,12 @@
 #include <QApplication>
 #include <QIcon>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QProcess>
+#include <QDebug>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -80,6 +86,77 @@ void MainWindow::on_ButtonPlayPause_clicked()
         startTimer();
         QApplication::processEvents();
 
+        // ===========================================
+        // Atualização dos robôs e variáveis necessárias
+        // ===========================================
+
+        // 1. Coletar os dados atuais
+        QString category = ui->ButtonCategoria->text();
+        QString color = m_isButtonColorBlue ? "blue" : "yellow";
+        QString side = (ui->ButtonLado->text() == "ESQUERDO") ? "left" : "right";
+        QList<RobotData>& robots = m_configManager->getRobots();
+
+        // 2. Transformar os dados dos robôs em JSON
+        QJsonArray robotsArray;
+        for (const RobotData& robot : robots) {
+            QJsonObject robotObj;
+            robotObj["name"] = robot.name;
+            robotObj["id"] = robot.id;
+            robotObj["role"] = robot.role == RobotRole::Attacker ? "attacker" :
+                               robot.role == RobotRole::Goalkeeper ? "goalkeeper" :
+                               robot.role == RobotRole::Defender ? "defender" : "unknown";
+            robotsArray.append(robotObj);
+        }
+
+        // 3. Converte JSON para uma string compacta
+        QJsonDocument doc(robotsArray);
+        QString jsonString = doc.toJson(QJsonDocument::Compact);
+        //qDebug() << "Dados dos robôs em JSON:" << jsonString;
+        
+        // 4. Montar e executar o comando QProcess
+        QProcess *process = new QProcess(this);
+        QString program = "/bin/python3";
+        QString appDir = QCoreApplication::applicationDirPath();
+        QDir dir(appDir);
+
+        if (dir.cd("../..")) {
+            QString projectRootPath = dir.path();
+            // qDebug() << "Caminho raiz do projeto:" << projectRootPath;
+        } else {
+            qDebug() << "Erro: Não foi possível voltar 2 diretórios.";
+        }
+        QString scriptPath = dir.path() + "/scripts/update_config.py";
+        QStringList arguments;
+        arguments << scriptPath 
+                  << "--category" << category
+                  << "--color" << color
+                  << "--side" << side
+                  << "--robot-data" << jsonString;
+        
+        qDebug() << "Executando comando de atualização:" << program << arguments;
+        process->start(program, arguments);
+        process->waitForFinished(-1);
+
+        // ===========================================
+        // Captura e exibe a saída do script
+        // ===========================================
+        // QByteArray stdOut = process->readAllStandardOutput();
+        // QByteArray stdErr = process->readAllStandardError();
+
+        // if (!stdOut.isEmpty()) {
+        //     qDebug() << "Saida do Script (stdout):" << QString::fromUtf8(stdOut);
+        //     appendLogMessage("Script: " + QString::fromUtf8(stdOut));
+        // }
+        // if (!stdErr.isEmpty()) {
+        //     qDebug() << "Erros do Script (stderr):" << QString::fromUtf8(stdErr);
+        //     appendLogMessage("Script ERRO: " + QString::fromUtf8(stdErr));
+        // }
+        // ===================================================================
+
+        qDebug() << "Script finalizado com o exit code:" << process->exitCode();
+
+        process->deleteLater();
+
         // startCommunication();
         m_playing = true;
     } else {
@@ -91,7 +168,6 @@ void MainWindow::on_ButtonPlayPause_clicked()
         // stopCommunication();
         m_playing = false;
     }
-
 }
 
 void MainWindow::setButtonToPlay()

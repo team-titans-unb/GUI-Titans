@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import Any, Dict
+import json
 
 ROLE_MAP = {
     'goalkeeper': 0,
@@ -40,10 +41,12 @@ COMMON_PROJECT_LOGIC = {
 PROJECT_CONFIGS: Dict[str, Dict[str, Any]] = {
     "VSSS": {
         "path": "VSSS/Corobeu/configs",
+        "valid_robots": ['ZEUS', 'KRATOS', 'ARES'],
         **COMMON_PROJECT_LOGIC
     },
     "SSL": {
         "path": "SSL-EL_CBR-2024/Controle",
+        "valid_robots": ['ALVIN', 'SIMON', 'THEODORE'],
         **COMMON_PROJECT_LOGIC
     }
 }
@@ -102,34 +105,22 @@ def main():
     parser.add_argument('--category', type=str, required=True, choices=PROJECT_CONFIGS.keys(), help="VSSS ou SSL.")
     parser.add_argument('--color', type=str, choices=['blue', 'yellow'], help="blue ou yellow.")
     parser.add_argument('--side', type=str, choices=['left', 'right'], help="left ou right.")
-    parser.add_argument('--robot_name', type=str, help="Nome do robô (ex: ZEUS, ALVIN).")
-    parser.add_argument('--set_role', type=str, choices=['goalkeeper', 'defender', 'attacker'], help="goalkeeper, defender ou attacker.")
-    parser.add_argument('--set_id', type=int, help="O novo ID do robô.")
-    
+    parser.add_argument('--robot-data', type=str, help="String JSON com a lista de configurações dos robôs.")
     args = parser.parse_args()
 
     # Lógica principal
 
-    # 1. Validação de Robôs (melhoria de robustez)
-    vsss_robots = ['ZEUS', 'KRATOS', 'ARES']
-    ssl_robots = ['ALVIN', 'SIMON', 'THEODORE']
-    if args.robot_name and args.category == 'VSSS' and args.robot_name.upper() not in vsss_robots:
-        print(f"ERRO: Robô '{args.robot_name}' inválido para a categoria VSSS. Use: {vsss_robots}")
-        return
-    if args.robot_name and args.category == 'SSL' and args.robot_name.upper() not in ssl_robots:
-        print(f"ERRO: Robô '{args.robot_name}' inválido para a categoria SSL. Use: {ssl_robots}")
-        return
-
-    # 2. Configuração de caminhos
+    # 1. Configuração de caminhos
     project_config = PROJECT_CONFIGS[args.category]
     script_dir = Path(__file__).parent
     project_root = (script_dir / '../../').resolve()
     config_file = project_root / project_config["path"] / project_config["config_filename"]
-
-    # 3. Criação de UM dicionário para TODAS as atualizações
+    print(f"DEBUG SCRIPT: Tentando acessar o arquivo em: {config_file}")
+    
+    # 2. Criação de UM dicionário para TODAS as atualizações
     updates_to_make = {}
 
-    # Adiciona atualizações globais ao dicionário
+    # 3. Adiciona atualizações globais ao dicionário
     if args.color:
         conf = project_config["variables"]["color"]
         updates_to_make[conf["var_name"]] = conf["formatter"](args.color)
@@ -137,18 +128,33 @@ def main():
         conf = project_config["variables"]["side"]
         updates_to_make[conf["var_name"]] = conf["formatter"](args.side)
 
-    # Adiciona atualizações específicas do robô ao dicionário
-    if args.robot_name and (args.set_role or args.set_id is not None):
-        robot_logic = project_config['robot_logic']
-        name = args.robot_name.upper()
+    # 4. Adiciona atualizações específicas do robô ao dicionário
+    if args.robot_data:
+        try:
+            robot_list = json.loads(args.robot_data)
+            robot_logic = project_config['robot_logic']
+            valid_names = project_config['valid_robots']
 
-        if args.set_id is not None:
-            var_name = robot_logic['id_var_template'].format(name=name)
-            updates_to_make[var_name] = str(args.set_id)
-        if args.set_role:
-            var_name = robot_logic['role_var_template'].format(name=name)
-            role_value = robot_logic['role_map'].get(args.set_role)
-            updates_to_make[var_name] = str(role_value)
+            for robot in robot_list:
+                name = robot.get("name", "").upper()
+                new_id = robot.get("id")
+                new_role = robot.get("role")
+
+                if name not in valid_names:
+                    print(f"AVISO: Robô com nome '{name}' inválido para a categoria {args.category}. Ignorando.")
+                    continue
+
+                if new_id is not None:
+                    var_name = robot_logic['id_var_template'].format(name=name)
+                    updates_to_make[var_name] = str(new_id)
+                if new_role is not None:
+                    var_name = robot_logic['role_var_template'].format(name=name)
+                    role_value = robot_logic['role_map'].get(new_role)
+                    if role_value is not None:
+                        updates_to_make[var_name] = str(role_value)
+
+        except json.JSONDecodeError:
+            print("ERRO: Formato de --robot-data inválido. Deve ser uma string JSON.")
 
     # 4. Aplicação das atualizações
 
