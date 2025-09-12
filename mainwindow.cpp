@@ -52,8 +52,8 @@ void MainWindow::setupInitialState()
     m_configManager.reset(new ConfigManager("mockdata.json"));
 
     QSettings settings("Titans", "UIState");
-    QString lastCategory = settings.value("lastCategory", "VSSS").toString();
-    m_isButtonColorBlue = settings.value("isButtonColorBlue", true).toBool();
+    QString lastCategory = settings.value(QString("lastCategory"), QString("VSSS")).toString();
+    m_isButtonColorBlue = settings.value(QString("isButtonColorBlue"), true).toBool();
 
     ui->ButtonCategoria->setText(lastCategory);
     if (m_isButtonColorBlue) {
@@ -74,7 +74,7 @@ void MainWindow::on_ButtonCategoria_clicked()
     ui->ButtonCategoria->setText(novoTexto);
 
     QSettings settings("Titans", "UIState");
-    settings.setValue("lastCategory", novoTexto);
+    settings.setValue(QStringLiteral("lastCategory"), novoTexto);
     
     loadCategory(novoTexto);
 }
@@ -155,7 +155,7 @@ void MainWindow::on_ButtonPlayPause_clicked()
 
         qDebug() << "Script finalizado com o exit code:" << process->exitCode();
 
-        process->deleteLater();
+        delete process;
 
         // startCommunication();
         m_playing = true;
@@ -250,7 +250,7 @@ void MainWindow::on_ButtonCor_clicked()
     m_configManager->save(currentCategory);
 
     QSettings settings("Titans", "UIState");
-    settings.setValue("isTeamColorBlue", m_isButtonColorBlue);
+    settings.setValue(QStringLiteral("isTeamColorBlue"), m_isButtonColorBlue);
     
     for(int i = 0; i < robots.size(); ++i) {
         RobotWidget* widget = m_robotWidgets[i];
@@ -296,10 +296,11 @@ void MainWindow::clearRobotLayout()
 {
     for (RobotWidget* widget : m_robotWidgets) {
         m_robotsLayout->removeWidget(widget);
-        widget->deleteLater();
+        delete widget;
     }
     m_robotWidgets.clear();
 }
+
 void MainWindow::on_ButtonLado_clicked()
 {
     if (ui->ButtonLado->text() == "ESQUERDO") {
@@ -308,8 +309,6 @@ void MainWindow::on_ButtonLado_clicked()
         ui->ButtonLado->setText("ESQUERDO");
     }
 }
-
-
 
 void MainWindow::onRobotWidgetClicked(const RobotData& currentRobotData)
 {
