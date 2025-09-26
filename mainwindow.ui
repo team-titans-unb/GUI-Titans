@@ -407,15 +407,15 @@
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="rightPanelButton">
+     <widget class="QLabel" name="fieldLabel">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
       <property name="text">
-       <string>Campo</string>
+       <string>campo</string>
       </property>
      </widget>
     </item>

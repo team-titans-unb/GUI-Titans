@@ -8,6 +8,10 @@
 #include <QApplication>
 #include <QIcon>
 #include <QDateTime>
+#include <cmath>
+
+#include <QNetworkDatagram>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -15,6 +19,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setupInitialState();
+
+    initVisionListener();
 
     //cronometro
     timer = new QTimer(this);
@@ -344,4 +350,144 @@ void MainWindow::appendControleMessage(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
     ui->controleTextEdit->appendPlainText("[" + timestamp + "] " + message);
+}
+
+
+// função que configura a conexão
+void MainWindow::initVisionListener() {
+    m_udpSocket = new QUdpSocket(this);
+
+    const QHostAddress multicastAddress = QHostAddress("224.5.23.2");
+    const quint16 port = 10020;
+
+    if (!m_udpSocket->bind(QHostAddress::AnyIPv4, port, QUdpSocket::ShareAddress)) {
+        qWarning() << "Falha ao fazer bind na porta UDP:" << port;
+        return;
+    }
+
+    if (!m_udpSocket->joinMulticastGroup(multicastAddress)) {
+        qWarning() << "Falha ao entrar no grupo multicast:" << multicastAddress.toString();
+        return;
+    }
+
+    connect(m_udpSocket, &QUdpSocket::readyRead, this, &MainWindow::readPendingDatagrams);
+
+    qDebug() << "Ouvindo pacotes de visão em" << multicastAddress.toString() << ":" << port;
+    ui->fieldLabel->setText("Aguardando pacotes do vss-vision...");
+}
+
+
+// função que é chamada quando os dados chegam
+void MainWindow::readPendingDatagrams() {
+    while (m_udpSocket->hasPendingDatagrams()) {
+        QByteArray datagram;
+        datagram.resize(m_udpSocket->pendingDatagramSize());
+        m_udpSocket->readDatagram(datagram.data(), datagram.size());
+
+        SSL_WrapperPacket packet;
+        if (packet.ParseFromArray(datagram.data(), datagram.size())) {
+            if (packet.has_detection() && packet.has_geometry()) {
+                // Chame a função passando os dois argumentos
+                drawFieldState(packet.detection(), packet.geometry());
+            }
+        }
+    }
+}
+
+
+//  função que desenha o campo na tela
+void MainWindow::drawFieldState(const SSL_DetectionFrame& detection, const SSL_GeometryData& geometry) {
+    QPixmap fieldPixmap(ui->fieldLabel->size());
+    fieldPixmap.fill(QColor("#006400"));
+    QPainter painter(&fieldPixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const SSL_GeometryFieldSize& field = geometry.field();
+    const float fieldLength = field.field_length();
+    const float fieldWidth = field.field_width();
+    const float boundaryWidth = field.boundary_width();
+    const float goalWidth = field.goal_width();
+    const float goalDepth = field.goal_depth();
+    const float penaltyAreaWidth = field.penalty_area_width();
+    const float penaltyAreaDepth = field.penalty_area_depth();
+    const float centerCircleRadius = 200.0;
+
+    // cálculo da escala invertida para um campo vertical
+    const float scaleX = (float)ui->fieldLabel->width() / (fieldWidth + boundaryWidth * 2);
+    const float scaleY = (float)ui->fieldLabel->height() / (fieldLength + boundaryWidth * 2);
+    const float scale = qMin(scaleX, scaleY) * 0.95;
+
+    painter.translate(ui->fieldLabel->width() / 2.0, ui->fieldLabel->height() / 2.0);
+
+    painter.setPen(QPen(Qt::white, 2));
+
+    // coordenadas X e Y invertida em todos os desenhos
+    // 1. Linhas de Contorno
+    painter.drawRect(QRectF(-fieldWidth / 2 * scale, -fieldLength / 2 * scale, fieldWidth * scale, fieldLength * scale));
+
+    // Linha do Meio de Campo
+    painter.drawLine(QPointF(-fieldWidth / 2 * scale, 0), QPointF(fieldWidth / 2 * scale, 0));
+
+    // Círculo Central
+    painter.drawEllipse(QPointF(0, 0), centerCircleRadius * scale, centerCircleRadius * scale);
+
+    // Área de Pênalti (Cima, "Esquerda" no campo horizontal)
+    painter.drawRect(QRectF(-penaltyAreaWidth / 2 * scale, (-fieldLength / 2) * scale, penaltyAreaWidth * scale, penaltyAreaDepth * scale));
+
+    // Área de Pênalti (Baixo, "Direita" no campo horizontal)
+    painter.drawRect(QRectF(-penaltyAreaWidth / 2 * scale, (fieldLength / 2 - penaltyAreaDepth) * scale, penaltyAreaWidth * scale, penaltyAreaDepth * scale));
+
+    painter.setPen(QPen(Qt::white, 4));
+    // Gol (Cima)
+    painter.drawRect(QRectF(-goalWidth / 2 * scale, (-fieldLength / 2 - goalDepth) * scale, goalWidth * scale, goalDepth * scale));
+
+    // Gol (Baixo)
+    painter.drawRect(QRectF(-goalWidth / 2 * scale, fieldLength / 2 * scale, goalWidth * scale, goalDepth * scale));
+
+    // Bola
+    if (detection.balls_size() > 0) {
+        const SSL_DetectionBall& ball = detection.balls(0);
+        painter.setBrush(QColor("orange"));
+        painter.setPen(Qt::NoPen);
+        // Coordenadas invertidas: (y, x)
+        painter.drawEllipse(QPointF(ball.y() * scale, ball.x() * scale), 22 * scale, 22 * scale);
+    }
+
+    // Robôs Azuis
+    painter.setBrush(Qt::blue);
+    painter.setPen(Qt::black);
+    for (const SSL_DetectionRobot& robot : detection.robots_blue()) {
+        painter.save();
+        // Coordenadas invertidas: (y, x)
+        painter.translate(robot.y() * scale, robot.x() * scale);
+        // MUDANÇA 3: Ajustamos a orientação em -90 graus
+        painter.rotate(qRadiansToDegrees(robot.orientation() - M_PI / 2.0));
+
+        float robotSize = 150 * scale;
+        painter.drawRect(QRectF(-robotSize / 2, -robotSize / 2, robotSize, robotSize));
+        painter.setBrush(Qt::white);
+        painter.drawRect(QRectF(robotSize / 6, -robotSize / 4, robotSize / 3, robotSize / 2));
+        painter.setBrush(Qt::blue);
+        painter.restore();
+    }
+
+    // Robôs Amarelos
+    painter.setBrush(Qt::yellow);
+    painter.setPen(Qt::black);
+    for (const SSL_DetectionRobot& robot : detection.robots_yellow()) {
+        painter.save();
+        // Coordenadas invertidas: (y, x)
+        painter.translate(robot.y() * scale, robot.x() * scale);
+        // MUDANÇA 3: Ajustamos a orientação em -90 graus
+        painter.rotate(qRadiansToDegrees(robot.orientation() - M_PI / 2.0));
+        float robotSize = 150 * scale;
+        painter.drawRect(QRectF(-robotSize / 2, -robotSize / 2, robotSize, robotSize));
+        painter.setBrush(Qt::black);
+        painter.drawRect(QRectF(robotSize / 6, -robotSize / 4, robotSize / 3, robotSize / 2));
+        painter.setBrush(Qt::yellow);
+        painter.restore();
+    }
+
+    painter.end();
+    ui->fieldLabel->setPixmap(fieldPixmap);
 }

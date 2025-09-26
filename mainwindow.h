@@ -7,6 +7,13 @@
 #include <QList>
 #include "robotdata.h"
 
+#include <QUdpSocket>
+#include <QPainter>
+
+#include "proto/wrapper.pb.h"
+#include "proto/messages_robocup_ssl_detection.pb.h"
+#include "proto/messages_robocup_ssl_geometry.pb.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -41,6 +48,8 @@ private slots:
     void updateTimer();
     void on_ButtonLimpar_clicked();
 
+    void readPendingDatagrams(); // Função que será chamada quando chegarem dados
+
 private:
     void setupInitialState();
     void loadCategory(const QString& category);
@@ -60,6 +69,13 @@ private:
 
     QTimer *timer;
     QTime screenTime;
+
+    void initVisionListener();   // Função para configurar o "ouvinte" de rede
+
+    void drawFieldState(const SSL_DetectionFrame& detection, const SSL_GeometryData& geometry);
+    // variável para o socket UDP (o "ouvido" da rede)
+    QUdpSocket *m_udpSocket = nullptr;
+
 };
 
-#endif // MAINWINDOW_H
+#endif
